@@ -15,7 +15,19 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
    (por cupo lleno o concurrencia), el turno origen ya fue destruido o cancelado. El trabajador pierde esas horas de su planificación semanal (8 o 10 hrs),
    dejando un saldo de horas negativo contra su contrato laboral.
 
-2. Plan de Desarrollo (PLAN.md).
+   MECANISMO DE QUIEBRE DE CONCURRENCIA:
+   Lectura simultánea (Time-of-Check): Dos coordinadoras asignan personal en el mismo puesto, día y bloque de manera simultánea durante las mañanas. Ambas
+   peticiones (Req A y Req B) consultan la disponibilidad al mismo instante y leen que el cupo está libre (cupo_actual < cupo_maximo).
+
+   Aprobación en memoria: La capa lógica de la aplicación valida exitosamente ambas solicitudes de forma independiente porque los datos que ambas consultaron
+   aún reflejan estado disponible.
+
+   Escritura no coordinada (Time-of-Use): Ambas conexiones ejecutan sus respectivas sentencias INSERT y confirman la transacción (COMMIT).
+
+   Violación de integridad: Al no existir una restricción única (UNIQUE constraint), un lock pesimista (SELECT ... FOR UPDATE) ni un nivel de aislamiento
+   serializable, ambos registros persisten, dejando el puesto con sobrecupo (p. ej., 2 trabajadores en un puesto de cupo 1).
+
+3. Plan de Desarrollo (PLAN.md).
 
    2.1 Descomposición del Problema y Supuestos
    
