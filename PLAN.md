@@ -39,7 +39,7 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
 
    FALTA DE ATOMOCIDAD EN EL "MOVER" MANUAL:
 
-   Al no existir un endpoint para mover, las coordinadoras ejecutan: Cancelar turno origen, Asignar turno destino.
+    Al no existir un endpoint para mover, las coordinadoras ejecutan: Cancelar turno origen, Asignar turno destino.
 
     Si la asignación de destino falla (por cupo lleno u error de red) tras haber cancelado el origen, el turno se pierde, resultando
     en la desaparición del turno y un saldo semanal negativo.
