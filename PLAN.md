@@ -27,7 +27,7 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
 
        • Supuesto: El cupo es estricto por regla de negocio; la nómina de fin de mes es inmutable para registros cerrados.
 
-   2.2 Alternativas Evaluadas y Descartadas
+   2.2 Alternativas Evaluadas y Descartadas.
    
        1. Restricción UNIQUE en Base de Datos: Descartada debido a que ciertos puestos admiten cupos dinámicos o mayores a 1
           (ej. URG Triage con cupo 2), y la existencia de sobrecupos históricos en la tabla bloquearía la migración DDL.
@@ -35,8 +35,8 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
        2. Cerrojos Distribuidos en Redis: Descartada para evitar añadir infraestructura, dependencias operacionales y puntos
           únicos de falla a 48 horas del cierre contable.
 
-       3. Enfoque Adoptado: Bloqueo pesimista a nivel de registro relacional (SELECT ... FOR UPDATE) sobre el cupo del puesto/bloque
-          dentro de una transacción ACID, junto con el endpoint atómico PATCH /api/turnos/{id}/mover.
+       3. Enfoque Adoptado: Bloqueo pesimista a nivel de registro relacional (SELECT ... FOR UPDATE) sobre el cupo del
+          puesto/bloque dentro de una transacción ACID, junto con el endpoint atómico PATCH /api/turnos/{id}/mover.
 
    2.3 Alcance Incremental y Delimitación.
 
