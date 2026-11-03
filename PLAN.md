@@ -16,6 +16,7 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
    dejando un saldo de horas negativo contra su contrato laboral.
 
    MECANISMO DE QUIEBRE DE CONCURRENCIA:
+   
    Lectura simultánea (Time-of-Check): Dos coordinadoras asignan personal en el mismo puesto, día y bloque de manera simultánea durante las mañanas. Ambas
    peticiones (Req A y Req B) consultan la disponibilidad al mismo instante y leen que el cupo está libre (cupo_actual < cupo_maximo).
 
