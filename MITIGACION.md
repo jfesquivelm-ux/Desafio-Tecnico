@@ -50,15 +50,15 @@ SELECT tr.id AS trabajador_id, CONCAT(tr.nombre, ' ', tr.apellido) AS trabajador
 
    Tabla de Verdad del Feature Flag:
    
-        COMPORTAMIENTO / FLUJO            FLAG OFF (turnos_mover_atomico=0)  FLAG ON (turnos_mover_atomico=1)
+        COMPORTAMIENTO / FLUJO.................FLAG OFF (turnos_mover_atomico=0).....FLAG ON (turnos_mover_atomico=1)
    
-      Control de Cupo (Asignación)...........Estricto (Bloqueo pesimista)........Estricto (Bloqueo pesimista)
+      Control de Cupo (Asignación).............Estricto (Bloqueo pesimista)............Estricto (Bloqueo pesimista)
    
-      Endpoint PATCH /api/turnos/{id}/mover..501 Not Implemented / Flujo.........Legacy 200 OK Atómico / 409 Rollback
+      Endpoint PATCH /api/turnos/{id}/mover....501 Not Implemented / Flujo.............Legacy 200 OK Atómico / 409 Rollback
    
-      Cálculo de Nómina y Reporte............Paridad Idéntica 100%...............Paridad Idéntica 100%
+      Cálculo de Nómina y Reporte..............Paridad Idéntica 100%...................Paridad Idéntica 100%
    
-      Riesgo de Pérdida de Turnos............Mitigado por procedimiento Ops.......Eliminado a nivel de API
+      Riesgo de Pérdida de Turnos..............Mitigado por procedimiento Ops..........Eliminado a nivel de API
 
 
    
