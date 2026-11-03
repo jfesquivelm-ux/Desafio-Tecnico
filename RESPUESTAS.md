@@ -32,7 +32,7 @@ Respuestas Resumidas (RESPUESTAS.md).
    
 7. ¿Qué le entregas a operaciones mientras tanto?.
 
-    Un manual técnico operacional (ops/MITIGACION.md) con consultas SQL de diagnóstico, updates puntuales por ID para subsanar turnos sin borrar datos y
+    Un manual técnico operacional (/MITIGACION.md) con consultas SQL de diagnóstico, updates puntuales por ID para subsanar turnos sin borrar datos y
     criterios de escalamiento.
     
 8. ¿Cómo llegaste a la causa raíz?.
@@ -46,9 +46,11 @@ Respuestas Resumidas (RESPUESTAS.md).
     infraestructura adicional a días del cierre de nómina.
 
 10. ¿Cómo usaste la IA en el proceso?.
+ 
     Se utilizó para acelerar la redacción de plantillas Markdown, contrastar sintaxis de locking pesimista y generar casos de prueba de concurrencia.
     Se rechazaron propuestas de validación exclusiva en cliente o limpiezas automáticas destructivas.
     
-11. ¿Qué harías distinto con más tiempo?.
+12. ¿Qué harías distinto con más tiempo?.
+  
     Implementaría WebSockets para actualizar en tiempo real la planilla visual de las coordinadoras, una cola asíncrona de asignación y un dashboard
     interno de autocorrección para Operaciones.
