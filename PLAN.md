@@ -51,24 +51,38 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
 4. Decisiones Técnicas (ADR).
 
    ADR-001: Mecanismo de Bloqueo y Control de Concurrencia
+   
      Contexto: Múltiples coordinadoras gestionan la dotación simultáneamente en horas punta matutinas.
+
      Decisión: Implementar bloqueo pesimista mediante SELECT ... FOR UPDATE sobre el cupo del puesto antes de asignar o mover.
+
      Alternativa Rechazada: Bloqueo optimista con columnas de versión (evita reintentos masivos de usuario ante alta fricción).
+
      Trade-off: Incremento despreciable en latencia transaccional durante colisión directa, asegurando integridad total.
    
    ADR-002: Contrato del Endpoint PATCH /api/turnos/{id}/mover
+
      Contexto: El frontend requiere mover turnos enviando {fecha, bloque, puesto_id?}.
+
      Decisión: Implementar transacción atómica única. Códigos de respuesta HTTP definidos:
+
        • 200 OK: Turno movido exitosamente con datos del nuevo estado.
+
        • 400 Bad Request: Carga útil con formato de fecha o bloque inválido.
+
        • 404 Not Found: Identificador de turno inexistente.
+
        • 409 Conflict: Cupo lleno en destino o turno previamente cancelado. 
+
        • 422 Unprocessable Entity: Regla contractual no cumplida.
    
    ADR-003: Estrategia de Feature Flagging y Paridad
+    
        Contexto: Garantizar paridad funcional total en producción con la bandera turnos_mover_atomico apagada.
+
        Decisión: La garantía de cupo aplica como fix de integridad universal (ON/OFF).
                  El comportamiento del endpoint PATCH responde 501 Not Implemented o flujo legado mientras esté apagado.
+   
        Trade-off: Se asume deuda técnica controlada (código condicional) para habilitar rollback inmediato sin despliegue.
    
 
