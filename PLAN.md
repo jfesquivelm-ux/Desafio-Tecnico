@@ -36,6 +36,16 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
     camino.
     El turno original fue eliminado, el nuevo nunca se creó, el trabajador pierde horas semanales y su saldo resulta negativo.
 
+   FALTA DE ATOMOCIDAD EN EL "MOVER" MANUAL:
+
+   Al no existir un endpoint para mover, las coordinadoras ejecutan: Cancelar turno origen, Asignar turno destino.
+
+    Si la asignación de destino falla (por cupo lleno u error de red) tras haber cancelado el origen, el turno se pierde, resultando
+    en la desaparición del turno y un saldo semanal negativo.
+
+    Si dos personas intentan reubicar personal al mismo puesto libre al mismo tiempo, ambas cancelan sus orígenes y chocan en el destino,
+    provocando sobrecupo o estados inconsistentes. 
+
 3. Plan de Desarrollo (PLAN.md).
 
    2.1 Descomposición del Problema y Supuestos
