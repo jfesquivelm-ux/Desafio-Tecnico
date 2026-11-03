@@ -2,16 +2,18 @@ DESAFÍO TÉCNICO FULLSTACK: TICKET TI-3188
 De: Jaime Esquivel Marchant
 Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Continuidad
 
-1. Análisis de Causa Raíz y Mecanismo del Fallo
-   Causa del Duplicado (Race Condition / TOCTOU): La verificación en capa de aplicación (ej. SELECT COUNT(*) < cupo) sin cerrojo pesimista (FOR UPDATE) ni restricción
-   a nivel relacional es vulnerable a condiciones de carrera (Time-of-Check to Time-of-Use). Durante las mañanas de alta concurrencia, múltiples coordinadoras
-   evalúan la disponibilidad del mismo puesto y bloque en la misma ventana de milisegundos; ambas leen cupo disponible y proceden a insertar, generando sobrecupo
-   en la base de datos.
+1. Análisis de Causa Raíz y Mecanismo del Fallo Causa del Duplicado (Race Condition / TOCTOU):
+
+   La verificación en capa de aplicación (ej. SELECT COUNT(*) < cupo) sin cerrojo pesimista (FOR UPDATE) ni
+   restricción a nivel relacional es vulnerable a condiciones de carrera (Time-of-Check to Time-of-Use). Durante las mañanas de alta concurrencia, múltiples
+   coordinadoras evalúan la disponibilidad del mismo puesto y bloque en la misma ventana de milisegundos; ambas leen cupo disponible y proceden a insertar,
+   generando sobrecupo en la base de datos.
    Causa de la Desaparición y Saldo Negativo: Al no existir una operación atómica para 'mover turno', el usuario ejecuta una secuencia manual:
    cancela (o elimina) el turno en el día origen y posteriormente intenta asignar en el día destino. Si la asignación en el destino falla
    (por cupo lleno o concurrencia), el turno origen ya fue destruido o cancelado. El trabajador pierde esas horas de su planificación semanal (8 o 10 hrs),
    dejando un saldo de horas negativo contra su contrato laboral.
-2. Plan de Desarrollo (PLAN.md)
+
+2. Plan de Desarrollo (PLAN.md).
    2.1 Descomposición del Problema y Supuestos
        • Inconsistencia de Cupo: Ausencia de concurrencia serializada/pesimista sobre el puesto/bloque.
        • Pérdida de Turnos: Falta de atomicidad transaccional en la acción de traslado entre días/bloques.
@@ -29,12 +31,13 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
        • Prioridad 2: Configuración turnos_mover_atomico en tabla configurations (off por defecto).
        • Prioridad 3: Implementación del endpoint PATCH /api/turnos/{id}/mover protegido por la bandera.
        • Lo que NO se toca: Motor de exportación de nómina, contratos históricos ni esquemas cerrados de auditoría.
-4. Decisiones Técnicas (ADR)
+5. Decisiones Técnicas (ADR)
    ADR-001: Mecanismo de Bloqueo y Control de Concurrencia
      Contexto: Múltiples coordinadoras gestionan la dotación simultáneamente en horas punta matutinas.
      Decisión: Implementar bloqueo pesimista mediante SELECT ... FOR UPDATE sobre el cupo del puesto antes de asignar o mover.
      Alternativa Rechazada: Bloqueo optimista con columnas de versión (evita reintentos masivos de usuario ante alta fricción).
      Trade-off: Incremento despreciable en latencia transaccional durante colisión directa, asegurando integridad total.
+   
    ADR-002: Contrato del Endpoint PATCH /api/turnos/{id}/mover
      Contexto: El frontend requiere mover turnos enviando {fecha, bloque, puesto_id?}.
      Decisión: Implementar transacción atómica única. Códigos de respuesta HTTP definidos:
@@ -43,6 +46,7 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
        • 404 Not Found: Identificador de turno inexistente.
        • 409 Conflict: Cupo lleno en destino o turno previamente cancelado. 
        • 422 Unprocessable Entity: Regla contractual no cumplida.
+   
    ADR-003: Estrategia de Feature Flagging y Paridad
        Contexto: Garantizar paridad funcional total en producción con la bandera turnos_mover_atomico apagada.
        Decisión: La garantía de cupo aplica como fix de integridad universal (ON/OFF).
