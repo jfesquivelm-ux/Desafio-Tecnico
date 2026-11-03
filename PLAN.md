@@ -28,6 +28,14 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
    Violación de integridad: Al no existir una restricción única (UNIQUE constraint), un lock pesimista (SELECT ... FOR UPDATE) ni un nivel de aislamiento
    serializable, ambos registros persisten, dejando el puesto con sobrecupo (p. ej., 2 trabajadores en un puesto de cupo 1).
 
+   POR QUE A VECES DESAPARECEN TURNO Y EL SALDO QUEDA NEGATIVO:
+   
+    El frontend no tiene implementada la operación atómica de mover. Para simular un traslado, la coordinadora debe:   DELETE / Cancelar
+    el turno original en el día origen.   POST / Asignar el turno en el día destino.   Si el paso 1 tiene éxito pero el paso 2 falla
+    (por ejemplo, porque otra coordinadora ocupó el cupo destino una fracción de segundo antes, o por error de red), la acción queda a medio
+    camino.
+    El turno original fue eliminado, el nuevo nunca se creó, el trabajador pierde horas semanales y su saldo resulta negativo.
+
 3. Plan de Desarrollo (PLAN.md).
 
    2.1 Descomposición del Problema y Supuestos
