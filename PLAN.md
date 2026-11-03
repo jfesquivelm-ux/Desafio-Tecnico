@@ -30,7 +30,7 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
 
    POR QUE A VECES DESAPARECEN TURNO Y EL SALDO QUEDA NEGATIVO:
    
-    El frontend no tiene implementada la operación atómica de mover. Para simular un traslado, la coordinadora debe:   DELETE / Cancelar
+    "El frontend no tiene implementada la operación atómica de mover. Para simular un traslado, la coordinadora debe":   DELETE / Cancelar
     el turno original en el día origen.   POST / Asignar el turno en el día destino.   Si el paso 1 tiene éxito pero el paso 2 falla
     (por ejemplo, porque otra coordinadora ocupó el cupo destino una fracción de segundo antes, o por error de red), la acción queda a medio
     camino.
