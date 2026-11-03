@@ -1,5 +1,7 @@
 DESAFÍO TÉCNICO FULLSTACK: TICKET TI-3188
+
 De: Jaime Esquivel Marchant
+
 Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Continuidad
 
 1. Análisis de Causa Raíz y Mecanismo del Fallo Causa del Duplicado (Race Condition / TOCTOU):
@@ -14,11 +16,13 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
    dejando un saldo de horas negativo contra su contrato laboral.
 
 2. Plan de Desarrollo (PLAN.md).
+
    2.1 Descomposición del Problema y Supuestos
        • Inconsistencia de Cupo: Ausencia de concurrencia serializada/pesimista sobre el puesto/bloque.
        • Pérdida de Turnos: Falta de atomicidad transaccional en la acción de traslado entre días/bloques.
        • Paridad Operacional: Riesgo de mutar reportes consolidados o alterar el archivo de nómina previo al cierre de mes.
        • Supuesto: El cupo es estricto por regla de negocio; la nómina de fin de mes es inmutable para registros cerrados.
+
    2.2 Alternativas Evaluadas y Descartadas
        1. Restricción UNIQUE en Base de Datos: Descartada debido a que ciertos puestos admiten cupos dinámicos o mayores a 1 (ej. URG Triage con cupo 2),
           y la existencia de sobrecupos históricos en la tabla bloquearía la migración DDL.
@@ -26,12 +30,15 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
           del cierre contable.
        3. Enfoque Adoptado: Bloqueo pesimista a nivel de registro relacional (SELECT ... FOR UPDATE) sobre el cupo del puesto/bloque dentro de una
           transacción ACID, junto con el endpoint atómico PATCH /api/turnos/{id}/mover.
-   2.3 Alcance Incremental y Delimitación
+
+   2.3 Alcance Incremental y Delimitación.
        • Prioridad 1: Corrección de concurrencia en la validación de cupo (aplica globalmente para frenar duplicados). 
        • Prioridad 2: Configuración turnos_mover_atomico en tabla configurations (off por defecto).
        • Prioridad 3: Implementación del endpoint PATCH /api/turnos/{id}/mover protegido por la bandera.
        • Lo que NO se toca: Motor de exportación de nómina, contratos históricos ni esquemas cerrados de auditoría.
-5. Decisiones Técnicas (ADR)
+
+4. Decisiones Técnicas (ADR).
+
    ADR-001: Mecanismo de Bloqueo y Control de Concurrencia
      Contexto: Múltiples coordinadoras gestionan la dotación simultáneamente en horas punta matutinas.
      Decisión: Implementar bloqueo pesimista mediante SELECT ... FOR UPDATE sobre el cupo del puesto antes de asignar o mover.
