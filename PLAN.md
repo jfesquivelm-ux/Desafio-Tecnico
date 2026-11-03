@@ -34,6 +34,7 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
     el turno original en el día origen.   POST / Asignar el turno en el día destino.   Si el paso 1 tiene éxito pero el paso 2 falla
     (por ejemplo, porque otra coordinadora ocupó el cupo destino una fracción de segundo antes, o por error de red), la acción queda a medio
     camino.
+
     El turno original fue eliminado, el nuevo nunca se creó, el trabajador pierde horas semanales y su saldo resulta negativo.
 
    FALTA DE ATOMOCIDAD EN EL "MOVER" MANUAL:
