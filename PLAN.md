@@ -61,15 +61,17 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
 
    2.2 Alternativas Evaluadas y Descartadas.
    
-       1. Restricción UNIQUE en Base de Datos: Descartada debido a que ciertos puestos admiten cupos dinámicos o mayores a 1
-          (ej. URG Triage con cupo 2), y la existencia de sobrecupos históricos en la tabla bloquearía la migración DDL.
+       Paso 1 (Integridad y Mitigación): Script de detección/corrección para Operaciones e incorporación del bloqueo pesimista
+       transaccional (FOR UPDATE) en toda asignación/movimiento, garantizando que el sobrecupo no pueda ocurrir bajo ninguna
+       circunstancia.
 
-       2. Cerrojos Distribuidos en Redis: Descartada para evitar añadir infraestructura, dependencias operacionales y puntos
-          únicos de falla a 48 horas del cierre contable.
+       Paso 2 (Endpoint de Negocio): Implementación del endpoint PATCH /api/turnos/{id}/mover bajo la configuración
+       turnos_mover_atomico.
 
-       3. Enfoque Adoptado: Bloqueo pesimista a nivel de registro relacional (SELECT ... FOR UPDATE) sobre el cupo del
-          puesto/bloque dentro de una transacción ACID, junto con el endpoint atómico PATCH /api/turnos/{id}/mover.
-
+       Paso 3 (Compatibilidad y Pruebas): Test suite de concurrencia y regresión (nómina, reportes y paridad con
+       flag apagado). 
+        
+   
    2.3 Alcance Incremental y Delimitación.
 
        • Prioridad 1: Corrección de concurrencia en la validación de cupo (aplica globalmente para frenar duplicados). 
@@ -80,7 +82,7 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
 
        • Lo que NO se toca: Motor de exportación de nómina, contratos históricos ni esquemas cerrados de auditoría.
 
-4. Decisiones Técnicas (ADR).
+5. Decisiones Técnicas (ADR).
 
    ADR-001: Mecanismo de Bloqueo y Control de Concurrencia
    
