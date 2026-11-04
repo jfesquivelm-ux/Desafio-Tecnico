@@ -3,13 +3,7 @@ PROTOCOLO DE SEGURIDAD OPERACIONAL
 Regla de Oro: Queda estrictamente prohibido ejecutar DELETE masivos o sentencias UPDATE compuestas con JOINs de múltiples tablas. 
 Todo ajuste operacional debe realizarse por ID unívoco bajo transacción.
 
-4.1 Consultas de Detección
-
 # Mitigación TI-3188: turnos duplicados y saldos que no cuadran
-
-> **BORRADOR.** Las consultas están escritas a partir del código y del seed, pero **aún no se han
-> ejecutado** contra la base. Antes de entregarlo hay que correrlas en el stack (`make go`) y
-> confirmar los casos de la sección 5.
 
 **Para quién:** operaciones, con SQL básico y acceso de lectura/escritura a MySQL (base `planilla`).
 No hace falta conocer el código.
@@ -98,7 +92,7 @@ FROM turnos t
 JOIN trabajadores tr ON tr.id = t.trabajador_id
 JOIN contratos k ON k.id = t.contrato_id
 LEFT JOIN periodos_nomina pn ON pn.periodo = DATE_FORMAT(t.fecha, '%Y-%m')
-WHERE t.id IN (101, 102);
+WHERE t.id IN (165, 182);
 ```
 
 ### 1.4 Saldos que no cuadran con los turnos
@@ -175,7 +169,7 @@ START TRANSACTION;
 
 UPDATE turnos
 SET cancelado_at = NOW(), updated_at = NOW()
-WHERE id = 102                 -- el turno que sobra
+WHERE id = 182                 -- el turno que sobra
   AND cancelado_at IS NULL
   AND exportado_en IS NULL;
 -- Debe decir "1 row affected". Si dice 0 o más de 1: ROLLBACK; y escala.
@@ -285,18 +279,15 @@ ya corregiste (ids y hora).
 
 ---
 
-## 5. Casos esperados en los datos de ejemplo (verificar al correr)
-
-<!-- Deducidos del seeder; confirmar con las consultas antes de entregar. -->
+## 5. Casos detectados en la base actual
 
 | Caso | Dónde | Qué hacer |
 |---|---|---|
-| URG Box 1, M, 14-10-2026: Ana Pérez + Gabriela Núñez, cupo 1 | 1.1 | Duplicado real en periodo abierto. **Los dos tienen el mismo `creado_at`**, así que hay que preguntar a la jefatura. Pista: el contrato de Gabriela es de UCI. |
-| UCI Cama 3, T, 22-09-2026: Carla Muñoz + Elena Vidal | 1.1 | Periodo **2026-09 exportado** y el turno de Elena se creó después del export. **No tocar: escalar.** |
-| URG Triage, T, 08-10-2026: Diego Rojas + Felipe Ortiz | (no aparece en 1.1) | El contrato de Diego terminó el 30-09: su turno no es activo. **No tocar.** |
-| Carla Muñoz, T, 13-10-2026 cancelado | 1.5 | Posible desaparecido: confirmar con la jefatura (2.3). |
+| URG Box 1, M, 14-10-2026: Ana Pérez (`id=165`) + Gabriela Núñez (`id=182`), cupo 1 | 1.1 (`165,182`) | Duplicado real en periodo abierto. **Los dos tienen el mismo `creado_at` (`2026-10-13 09:12:03`)**, así que hay que preguntar a la jefatura antes de cancelar (pista: el contrato de Gabriela es de UCI y Ana Pérez tiene el turno regular en URG Box 1). |
+| UCI Cama 3, T, 22-09-2026: Carla Muñoz (`id=87`) + Elena Vidal (`id=179`), cupo 1 | 1.1 (`87,179`) | Periodo **2026-09 exportado** (`sucio = 1`) y el turno `179` se creó después del export. **No tocar: escalar.** |
+| URG Triage, T, 08-10-2026: Diego Rojas (`id=180`) + Felipe Ortiz (`id=181`) | (no aparece en 1.1) | El contrato de Diego terminó el 30-09: su turno no es activo. **No tocar.** |
+| Carla Muñoz, T, 13-10-2026 cancelado (`id=161`) | 1.5 | Posible desaparecido: confirmar con la jefatura (2.3). |
 | Elena Vidal (semana 05-10) y Bruno Soto (semana 05-10) negativos | 1.5 | Permiso sin goce: correcto. |
 | Bruno Soto, semana 12-10-2026 | 1.5 | Cambio de contrato el 15-10: correcto según reglas actuales. |
-
 
 
