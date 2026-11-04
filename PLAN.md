@@ -47,9 +47,9 @@ Propuesta de Arquitectura, Plan de Mitigación Operacional y Entregables de Cont
     Si dos personas intentan reubicar personal al mismo puesto libre al mismo tiempo, ambas cancelan sus orígenes y chocan en el destino,
     provocando sobrecupo o estados inconsistentes. 
 
-PLAN.
+PLAN PRACTICO A EJECUCION.
 
-En Clínica Norte se reportan dos dolores recurrentes (~5 reclamos/semana), sobre todo en las mañanas cuando varias coordinadoras ajustan la planilla al mismo tiempo:
+Se reportan dos dolores recurrentes (~5 reclamos/semana), sobre todo en las mañanas cuando varias coordinadoras ajustan la planilla al mismo tiempo:
 1. **Sobrecupo (turnos duplicados en un mismo puesto/bloque):** El `2026-10-14` en `URG Box 1` bloque `M` (cupo = 1) aparecen dos trabajadoras activas asignadas al mismo tiempo (Ana Pérez `id=165` y Gabriela Núñez `id=182`).
 2. **Turnos que "desaparecen" y dejan saldo semanal negativo:** Al mover el turno de un trabajador a otro día, a veces el trabajador pierde el turno original sin quedar asignado en el nuevo día, quedando con saldo negativo en la semana (ej. Carla Muñoz `id=161` el `2026-10-13`).
 
