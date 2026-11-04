@@ -1,9 +1,6 @@
-PROTOCOLO DE SEGURIDAD OPERACIONAL
-
-Regla de Oro: Queda estrictamente prohibido ejecutar DELETE masivos o sentencias UPDATE compuestas con JOINs de múltiples tablas. 
-Todo ajuste operacional debe realizarse por ID unívoco bajo transacción.
-
 # Mitigación TI-3188: turnos duplicados y saldos que no cuadran
+
+> **PROTOCOLO DE SEGURIDAD OPERACIONAL — Regla de Oro:** Queda estrictamente prohibido ejecutar `DELETE` masivos o sentencias `UPDATE` compuestas con `JOIN` de múltiples tablas. Todo ajuste operacional debe realizarse por `ID` unívoco bajo transacción (`START TRANSACTION ... COMMIT`).
 
 **Para quién:** operaciones, con SQL básico y acceso de lectura/escritura a MySQL (base `planilla`).
 No hace falta conocer el código.
@@ -202,7 +199,7 @@ START TRANSACTION;
 
 UPDATE turnos
 SET cancelado_at = NULL, updated_at = NOW()
-WHERE id = 205
+WHERE id = 161                 -- ej. turno cancelado de Carla Muñoz el 2026-10-13
   AND cancelado_at IS NOT NULL
   AND exportado_en IS NULL;
 -- "1 row affected" o ROLLBACK + escalar.
@@ -214,17 +211,17 @@ COMMIT;
 
 ### 2.4 Saldo desactualizado
 
-Toma `saldo_id` y `asignadas_esperadas` de la consulta 1.4 y actualiza **esa fila**:
+Corre la consulta 1.4 para obtener `saldo_id` y `asignadas_esperadas` del contrato modificado y actualiza **esa única fila**:
 
 ```sql
 START TRANSACTION;
 
 UPDATE saldos
-SET horas_asignadas = 32.0,                 -- asignadas_esperadas
+SET horas_asignadas = 32.0,                 -- asignadas_esperadas según 1.4
     saldo           = 32.0 - horas_contrato,
     actualizado_at  = NOW(),
     updated_at      = NOW()
-WHERE id = 57;                              -- saldo_id
+WHERE id = 57;                              -- saldo_id según 1.4
 -- "1 row affected" o ROLLBACK + escalar.
 
 COMMIT;
@@ -289,5 +286,4 @@ ya corregiste (ids y hora).
 | Carla Muñoz, T, 13-10-2026 cancelado (`id=161`) | 1.5 | Posible desaparecido: confirmar con la jefatura (2.3). |
 | Elena Vidal (semana 05-10) y Bruno Soto (semana 05-10) negativos | 1.5 | Permiso sin goce: correcto. |
 | Bruno Soto, semana 12-10-2026 | 1.5 | Cambio de contrato el 15-10: correcto según reglas actuales. |
-
 
