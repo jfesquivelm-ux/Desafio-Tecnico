@@ -1,5 +1,7 @@
 Respuestas estructuradas a las preguntas clave del desafío TI-3188 basadas en el documento: 
 
+PUNTO DE VISTA TEORICO.
+
 1. ¿Por qué se duplican los turnos si el código "valida el cupo" antes de guardar? 
 
 Porque existe una condición de carrera del tipo TOCTOU (Time-of-Check to Time-of-Use). La 
@@ -100,3 +102,42 @@ como una única transacción atómica:
 4. Escalar: Criterios claros de detención (por ejemplo: si el turno duplicado pertenece a un 
 mes con nómina ya enviada o si hay inconsistencias en contratos múltiples) para 
 congelar el caso y derivarlo a desarrolo.
+
+EN FUNCION DE LO PRACTICADO.
+
+# Respuestas — TI-3188
+
+### 1. ¿Por qué se duplican los turnos si el código "valida el cupo" antes de guardar?
+Porque [`AsignarTurno::procesar`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/app/Clinica/Logicas/Turnos/AsignarTurno.php) ejecutaba una lectura (`validarCupo` → `COUNT(*)`) y luego una escritura (`$turno->save()`) sin transacción ni bloqueo pesimista (*check-then-act*). Cuando dos peticiones llegan al mismo tiempo, ambas leen `ocupados = 0` antes de que la otra inserte y ambas aprueban la validación (`id=165` e `id=182` tienen el mismo `creado_at`).
+
+### 2. ¿En qué condiciones se rompe esa validación? ¿Cómo lo reproduces?
+Se rompe cuando dos o más peticiones concurrentes asignan sobre el mismo puesto/fecha/bloque (o al mismo trabajador) dentro de la ventana de milisegundos entre el `SELECT COUNT(*)` y el `INSERT`. Se reproduce de forma determinista en [`AsignarTurnoConcurrenciaTest`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/tests/Feature/AsignarTurnoConcurrenciaTest.php) (interceptando el evento `Turno::creating`) y con concurrencia HTTP real mediante [`simular_carrera_asignar.py`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/tests/concurrencia/simular_carrera_asignar.py) y [`AsignarTurnoConcurrenciaRealTest`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/tests/Feature/AsignarTurnoConcurrenciaRealTest.php).
+
+### 3. ¿De dónde sale el saldo negativo? ¿Es el mismo mecanismo que el duplicado?
+No es el mismo mecanismo, pero sí consecuencia del mismo flujo de trabajo en horas punta: como no existía "mover turno", la coordinadora cancelaba primero el turno (`POST /api/turnos/{id}/cancelar`) y luego intentaba asignarlo en el nuevo día (`POST /api/turnos`). Si en ese instante otra coordinadora ocupaba el cupo destino, la asignación fallaba con `409`, el turno original quedaba cancelado y [`TurnoObserver`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/app/Observers/TurnoObserver.php) recalculaba el saldo semanal con 8 horas menos (además de los casos legítimos por permisos sin goce o cambio de contrato a mitad de semana).
+
+### 4. ¿Cómo debería funcionar "mover" como acción de verdad (no cancelar y asignar a mano)?
+En [`MoverTurno::procesar`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/app/Clinica/Logicas/Turnos/MoverTurno.php) (`PATCH /api/turnos/{id}/mover`), toda la operación corre en una sola transacción bloqueando en orden `trabajador -> puesto destino -> turno origen` ([ADR 0002](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/docs/decisions/0002-mover-turno-como-cancelar-y-crear.md)). Si el destino tiene cupo y contrato vigente (y ningún periodo está exportado), cancela el turno origen y crea el nuevo; si cualquier validación falla, hace *rollback* y el turno original nunca se pierde.
+
+### 5. ¿Qué pasa con el saldo, el reporte y la nómina cuando un turno se mueve?
+Al cancelar el turno origen y crear el nuevo como dos modelos `Turno`, [`TurnoObserver::saved`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/app/Observers/TurnoObserver.php) se dispara para ambos: recalcula el saldo de la semana/contrato origen y el de la semana/contrato destino, e invalida la caché del reporte de dotación (`dotacion_version`). La nómina solo considera `Turno::activos()`, por lo que ignora el turno origen cancelado y contabiliza el nuevo sin duplicar horas.
+
+### 6. ¿Qué entregas primero para que el dolor pare ya, y qué dejas para después?
+Primero se entrega el guía de mitigación operativa ([`ops/MITIGACION.md`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/ops/MITIGACION.md)) y el bloqueo transaccional en [`AsignarTurno`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/app/Clinica/Logicas/Turnos/AsignarTurno.php) (siempre activo), junto con el endpoint `PATCH /api/turnos/{id}/mover` apagado por defecto bajo `turnos_mover_atomico`. Se deja para después la integración en el frontend React y la corrección de deuda técnica heredada que cambiaría contratos actuales (`bloquearPeriodoExportado` y el `catch` que devuelve `201/id=0`; ver [PLAN.md](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/plans/PLAN.md)).
+
+### 7. ¿Qué le entregas a operaciones mientras tanto?
+El runbook [`ops/MITIGACION.md`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/ops/MITIGACION.md) con consultas SQL listas para copiar y pegar que detectan sobrecupos activos (`165,182` en octubre y `87,179` en septiembre), turnos dobles de un mismo trabajador y saldos desfasados, diferenciándolos de falsos positivos (contratos vencidos como `id=180` o permisos sin goce). Incluye sentencias `UPDATE ... WHERE id = ?` en transacción para cancelar/reactivar y recalcular `saldos`, además de reglas claras de cuándo detenerse y escalar (ej. periodos ya exportados como `2026-09`).
+
+### 8. ¿Cómo llegaste a la causa?
+Inspeccionando el camino de `POST /api/turnos` en [`AsignarTurno.php`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/app/Clinica/Logicas/Turnos/AsignarTurno.php) y [`TurnosActivosPorBloque.php`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/app/Clinica/Consultas/TurnosActivosPorBloque.php), donde vi que el conteo de ocupados y el `save()` ocurrían sin transacción ni `lockForUpdate()`, y cruzándolo con [`PlanillaSeeder.php`](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/database/seeders/PlanillaSeeder.php), que planta los dos turnos del `2026-10-14` con el mismo timestamp `2026-10-13 09:12:03` y el turno cancelado de Carla Muñoz el `2026-10-13`. Luego confirmé el comportamiento con el test de caracterización y el script multihilo en Python contra los workers de `php-fpm`.
+
+### 9. ¿Qué alternativas descartaste y por qué?
+Descarté crear un índice `UNIQUE (puesto_id, fecha, bloque)` porque hay cupos mayores a 1, cupos variables en el tiempo y turnos cancelados en la misma tabla; y descarté hacer `lockForUpdate()` directo sobre `turnos` porque con 0 filas activas InnoDB bloquea por *gap locks* sobre el índice `fecha`, afectando otros puestos ([ADR 0001](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/docs/decisions/0001-bloqueo-pesimista-por-filas-padre.md)). En `MoverTurno` descarté hacer `UPDATE` sobre la misma fila porque no recalcularía el saldo de la semana origen al cambiar de semana ([ADR 0002](file:///home/jfesq/proyectos/rflex-semi-senior-fullstack-challenge-2026-11-4e1b/docs/decisions/0002-mover-turno-como-cancelar-y-crear.md)).
+
+### 10. ¿Cómo usaste la IA (qué le pediste, qué aceptaste, qué rechazaste)?
+La usé para explorar rápidamente las consultas Eloquent (`TurnosActivosPorBloque`, `validarCupo`), generar el andamiaje del script de concurrencia en Python (`threading.Barrier`), redactar los tests de PHPUnit y estructurar las consultas SQL de `ops/MITIGACION.md`. Acepté la estrategia de bloquear las filas padre (`trabajadores` y `puestos`) en orden fijo y el diseño de `MoverTurno` como cancelar + crear; corregí una primera suposición sobre usar el test de evento `Turno::creating` para validar el fix (ya que corre en la misma conexión y no prueba locks entre transacciones, por lo que sumamos `AsignarTurnoConcurrenciaRealTest` con `Http::pool`) y ajusté la aserción de JSON en `ParidadConfigApagadaTest` porque MySQL reordena las llaves de columnas `JSON`.
+
+### 11. ¿Qué harías distinto con más tiempo?
+Conectaría el menú contextual de la planilla en React al nuevo endpoint `PATCH /api/turnos/{id}/mover` cuando la flag esté activa, y abriría un segundo PR para corregir el typo `bloquearPeriodoExportado` → `bloquear_periodo_exportado`, eliminar la clave duplicada `validarCupo` en `configurations` y reemplazar el `catch` de `AsignarTurno` que devuelve `201` con `id = 0` por un error `500` real monitoreado.
+
+
