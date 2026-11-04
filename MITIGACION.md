@@ -192,7 +192,7 @@ cancela el otro. Después, 2.4.
      planilla, que recalcula todo sola.
 2. Verifica que el cupo de ese puesto, fecha y bloque **tenga espacio** (1.1 para esa fecha) y que el
    trabajador no tenga otro turno en ese bloque (1.2).
-3. Reactívalo:
+3. Reactívalo: Antes de reactivar un turno cancelado hay que comprobar el cupo, o se vuelve a crear el duplicado.
 
 ```sql
 START TRANSACTION;
